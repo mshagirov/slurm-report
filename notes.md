@@ -1,6 +1,12 @@
 # Slurm Cluster Usage Queries
 
-- Cluster usage
+## List Users with Their Account
+
+```bash
+sacctmgr show user withassoc format=user%25,defaultaccount%25
+```
+
+## Cluster usage
 
 ```bash
 sreport -T "gres/gpu,cpu" \
