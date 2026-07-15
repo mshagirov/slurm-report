@@ -3,7 +3,7 @@
 ## List Users with Their Account
 
 ```bash
-sacctmgr show user withassoc format=user%25,defaultaccount%25
+sacctmgr show user withassoc format=user,defaultaccount -p
 ```
 
 ## Cluster usage
@@ -19,14 +19,18 @@ sreport -T "gres/gpu,cpu" \
 - Job's resource allocation for each user and job
 
 ```bash
-sacct --user=muratmbit\
+# use -T to truncate start/end times
+sacct -X -T -p \
+      --user=muratmbit \
+      --format=User,Account,Partition,JobID,JobName,Start,End,ElapsedRaw,AllocTRES,State \
       --starttime=2026-03-01 \
       --endtime=2026-03-31 \
-      --format=JobID,JobName,Start,End,ElapsedRaw,CPUTime,AllocCPUS,AllocTRES%50,State
+| sed 's/,/;/g; s/|/,/g' \
+| grep -vE 'CANCELLED|FAILED' \ # do not count failed and cancelled jobs
+| column -t -s ',' # optional for displaying on CLI
 ```
 
-- ElapsedRaw: job's elapsed time in seconds
-- CPUTime: (Elapsed time * CPU count) in HH:MM:SS format.
+- ElapsedRaw: job's elapsed time in second
 - AllocCPUS: Total number of CPUs allocated to the job (equivalent to NCPUS).
 - AllocTRES: Trackable resources. Resources allocated to the job/step after the job started running.
 - State: job status
