@@ -140,7 +140,7 @@ def main():
     if args.input is None:
         csv_file = Path('sacct_output.csv')
         starttime = args.starttime if args.starttime else datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
-        endtime = args.endtime if args.endtime else datetime.now().isoformat()
+        endtime = args.endtime if args.endtime else datetime.now().replace(microsecond=0).isoformat()
         cols, rows = slurm_acct(starttime, endtime)
     else:
         csv_file = Path(args.input)
