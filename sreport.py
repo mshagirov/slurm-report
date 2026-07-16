@@ -1,9 +1,10 @@
+#!/usr/bin/python3
+
 import argparse
 import subprocess
 from collections import defaultdict
 import csv
 from datetime import datetime
-from datetime import date
 from pathlib import Path
 import re
 import sys
@@ -53,6 +54,7 @@ def row_str2dict(col_names, row_str):
 def slurm_acct(starttime, endtime):
     """Slurm accounting table for a (truncated) period from 'start' to 'end'"""
     cmd = f"sacct -X -T -p --allusers --format=User,Account,Partition,JobID,JobName,Start,End,ElapsedRaw,AllocTRES,State --starttime={starttime} --endtime={endtime}"
+
     result = subprocess.run(cmd.split(),
                             capture_output=True,
                             text=True,
@@ -125,9 +127,9 @@ def parse_args(args):
     parser.add_argument('-o', '--output',
                         help='output path for processed CSV files', default=None)
     parser.add_argument('-S', '--starttime',
-                        help='start time of the report period in ISO format for `sacct`, e.g., "2026-07-01"')
+                        help='start time of the report period in ISO format for `sacct`; DEFAULT: midnight start of the day 00:00:00')
     parser.add_argument('-E', '--endtime',
-                        help='end of the report period in ISO format for `sacct`, e.g., "2026-07-30"')
+                        help='end of the report period in ISO format for `sacct`; DEFAULT: current datetime (now)')
     parser.add_argument('--fixbilling',
                         help='use \'cpu\' and \'gres/gpu\' values for billing CPU and GPU jobs',
                         action='store_true')
@@ -189,6 +191,9 @@ def main():
             print(f'Directory doesn\'t exist:\n {output_dir}')
             return
         write_csv(output_dir/f"{'report_'+ csv_file.name}", user_cols, user_rows)
+
+        if args.input is None:
+            write_csv(output_dir/ csv_file.name, cols, rows)
 
 
 if __name__ == '__main__':
