@@ -64,7 +64,7 @@ def slurm_acct(starttime, endtime):
         raise Exception(f'{result.stderr}')
     out = result.stdout.replace(',', ';').replace('|', ',').split('\n')
     col_names =  out[0].split(',')
-    rows = row_str2dict(col_names, out[1:])
+    rows = list(map(lambda x:row_str2dict(col_names,x), out[1:]))
     return col_names, rows
 
 
