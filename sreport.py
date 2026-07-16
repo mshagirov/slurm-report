@@ -1,7 +1,9 @@
 import argparse
+import subprocess
 from collections import defaultdict
 import csv
 from datetime import datetime
+from datetime import date
 from pathlib import Path
 import re
 import sys
@@ -38,6 +40,40 @@ def write_csv(csv_path, col_names, rows):
             f.write("\n")
     except Exception as e:
         print(f"Error occurred when writing\n\t{csv_path}")
+        raise e
+
+
+def row_str2dict(col_names, row_str):
+    new_row = {}
+    for col,val in zip(col_names, row_str.split(',')):
+        new_row[col] = val
+    return new_row
+
+
+def slurm_acct(starttime, endtime):
+    """Slurm accounting table for a (truncated) period from 'start' to 'end'"""
+    cmd = f"sacct -X -T -p --allusers --format=User,Account,Partition,JobID,JobName,Start,End,ElapsedRaw,AllocTRES,State --starttime={starttime} --endtime={endtime}"
+    result = subprocess.run(cmd.split(),
+                            capture_output=True,
+                            text=True,
+                            check=True
+                            )
+
+    if result.returncode != 0:
+        print(f'Error calling sacct\nEXIT {result.returncode}')
+        raise Exception(f'{result.stderr}')
+    out = result.stdout.replace(',', ';').replace('|', ',').split('\n')
+    col_names =  out[0].split(',')
+    rows = row_str2dict(col_names, out[1:])
+    return col_names, rows
+
+
+def write_text(filepath, content):
+    try:
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(content)
+    except Exception as e:
+        print(f"Error while writing\n  {filepath}")
         raise e
 
 
@@ -82,18 +118,16 @@ def add_price_rate(cols, rows):
         row[col_name] = PRICE_RATES[partition]
 
 
-def row_str2dict(col_names, row_str):
-    new_row = {}
-    for col,val in zip(col_names, row_str.split(',')):
-        new_row[col] = val
-    return new_row
-
-
 def parse_args(args):
     parser = argparse.ArgumentParser(description="Generate Slurm billing report using `sacct`.")
-    parser.add_argument('csv_file',
-                        help='path to CSV file containing a sacct output')
-    parser.add_argument('-o', '--output', help='output path for processed CSV files', default=None)
+    parser.add_argument('-i', '--input',
+                        help='path to CSV file containing a sacct output.; if provided the input CSV will be used instead of sacct command and "starttime" and "endtime" are ignored')
+    parser.add_argument('-o', '--output',
+                        help='output path for processed CSV files', default=None)
+    parser.add_argument('-S', '--starttime',
+                        help='start time of the report period in ISO format for `sacct`, e.g., "2026-07-01"')
+    parser.add_argument('-E', '--endtime',
+                        help='end of the report period in ISO format for `sacct`, e.g., "2026-07-30"')
     parser.add_argument('--fixbilling',
                         help='use \'cpu\' and \'gres/gpu\' values for billing CPU and GPU jobs',
                         action='store_true')
@@ -102,10 +136,17 @@ def parse_args(args):
 
 def main():
     args = parse_args(sys.argv[1:])
-    csv_file = Path(args.csv_file)
-    output_dir = args.output
 
-    cols, rows = read_csv(csv_file)
+    if args.input is None:
+        csv_file = Path('sacct_output.csv')
+        starttime = args.starttime if args.starttime else datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        endtime = args.endtime if args.endtime else datetime.now().isoformat()
+        cols, rows = slurm_acct(starttime, endtime)
+    else:
+        csv_file = Path(args.input)
+        cols, rows = read_csv(csv_file)
+
+    output_dir = args.output
 
     if args.fixbilling:
         print('BillingFixing: enabled')
