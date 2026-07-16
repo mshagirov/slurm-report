@@ -118,7 +118,7 @@ def main():
         return
 
     add_job_duration_hours(cols, rows)
-    add_price_rate(cols, rows)
+    # add_price_rate(cols, rows)
 
     users = defaultdict(lambda: defaultdict(float))
     for row in rows:
