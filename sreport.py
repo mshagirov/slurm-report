@@ -123,7 +123,7 @@ def add_price_rate(cols, rows):
     cols.append(col_name)
     for row in rows:
         partition = row['Partition']
-        row[col_name] = PRICE_RATES[partition]
+        row[col_name] = PRICE_RATES.get(partition, '0')
 
 
 def parse_args(args):
