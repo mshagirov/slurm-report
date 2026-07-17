@@ -178,7 +178,7 @@ def main():
         fix_billing(rows)
 
     if (cols is None) or (rows is None) or (not cols) or (not rows):
-        print('Invalid rows or cols')
+        print('Empty rows or cols')
         print(cols)
         print(rows)
         return
