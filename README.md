@@ -7,7 +7,8 @@
 ```bash
 # print report to the STDOUT:
 # Total usage is in CPU-Hours or GPU-Hours (= Billing * DurationHours)
-$ python3 sreport.py -S 2026-03-01 -E 2026-03-31
+python3 sreport.py -S 2026-03-01 -E 2026-03-31
+
 Group           User            Type            Rate            TotalHours
 mbit            murat           cuda-large      0.0077          31.98
 mbit            murat           cpu             0.00154         6.46
