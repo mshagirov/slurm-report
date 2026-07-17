@@ -1,6 +1,6 @@
-# slurm-report
+# `sreport.py` : Slurm Usage Report
 
-## Using `sreport.py`
+## Usage Examples
 
 - Use `sacct` data directly (requires `sacct`)
 
@@ -31,9 +31,17 @@ python3 sreport.py -i ./hpc-usage-2026-03-reports/sacct_2026-03-01_2026-03-31_tr
 sreport.py -i hpc-usage-2026-03.csv -o hpc-usage-2026-03-reports
 ```
 
+## Price Rates
+
+Modify the `PRICE_RATES = {..}` dictionary with matching partition names as keys.
+Values must be strings (string representation of a float or int.)
+
 ## Generate Job Accounting Table
 
-> Optional as `sacct` can be called from `sreport.py`
+> Preparing `sacct` jobs table for `sreport.py`
+
+You can prepare your Slurm jobs table on a machine with `sacct` (Slurm) to analyse
+it later with `sreport.py`.
 
 - Required fields :
   - User
@@ -60,11 +68,7 @@ sacct -X -T -p \
 
 - `grep` and `column` are optional, for filtering and printing the `sacct` output.
 - Save the above into a raw report file (e.g., using `tee` as shown above).
-
-## Price Rates
-
-Modify the `PRICE_RATES = {..}` dictionary with matching partition names as keys.
-Values must be strings (string representation of a float or int.)
+- Use the CSV file with `sreport.py` (does not require `sacct`).
 
 ## Development and Testing
 
