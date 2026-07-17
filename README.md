@@ -17,8 +17,7 @@ mkdir hpc-usage-2026-03-reports
 python3 sreport.py -S 2026-03-01 -E 2026-03-31 --output hpc-usage-2026-03-reports
 ```
 
-- Provide the path to CSV file (accounting data from `sacct`) and save the results
-to a directory (optional)
+- Provide the path to CSV file (accounting data from `sacct`)
 
 ```bash
 # read the table from the CSV file instead of calling sacct
