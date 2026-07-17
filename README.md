@@ -5,9 +5,15 @@
 - Use `sacct` data directly (requires `sacct`)
 
 ```bash
-# print report to the STDOUT
-python3 sreport.py -S 2026-03-01 -E 2026-03-31
-# to save the sacct and sreport output specify a directory with --output
+# print report to the STDOUT:
+# Total usage is in CPU-Hours or GPU-Hours (= Billing * DurationHours)
+$ python3 sreport.py -S 2026-03-01 -E 2026-03-31
+Group           User            Type            Rate            TotalHours
+mbit            murat           cuda-large      0.0077          31.98
+mbit            murat           cpu             0.00154         6.46
+mbit            murat           cuda-small      0.00385         0.12
+# save the sreport.py output (including jobs table from sacct):
+mkdir hpc-usage-2026-03-reports
 python3 sreport.py -S 2026-03-01 -E 2026-03-31 --output hpc-usage-2026-03-reports
 ```
 
@@ -15,8 +21,8 @@ python3 sreport.py -S 2026-03-01 -E 2026-03-31 --output hpc-usage-2026-03-report
 to a directory (optional)
 
 ```bash
-mkdir hpc-usage-2026-03-reports
-python3 sreport.py --input hpc-usage-2026-03.csv --output hpc-usage-2026-03-reports
+# read the table from the CSV file instead of calling sacct
+python3 sreport.py -i ./hpc-usage-2026-03-reports/sacct_2026-03-01_2026-03-31_trunc.csv
 ```
 
 - Set the `sreport.py` permission to be executable with
@@ -43,17 +49,18 @@ and "end" times.
 ```bash
 # use -T to truncate start/end times
 sacct -X -T -p \
-      --user=murat \ # optional and can be used with --allusers
-      --format=User,Account,Partition,JobID,JobName,Start,End,ElapsedRaw,AllocTRES,State \
-      --starttime=2026-03-01 \
-      --endtime=2026-03-31 \
+--user=murat \
+--format=User,Account,Partition,JobID,JobName,Start,End,ElapsedRaw,AllocTRES,State \
+--starttime=2026-03-01 \
+--endtime=2026-03-31 \
 | sed 's/,/;/g; s/|/,/g' \
-| grep -vE 'CANCELLED|FAILED' \ # do not count failed and cancelled jobs
-> hpc-usage-2026-03.csv # write the table to a file
-# | column -t -s ',' # optional for displaying on CLI
+| grep -vE 'CANCELLED|FAILED' \
+| tee hpc-usage-2026-03.csv \
+| column -t -s ','
 ```
 
-- Save the above into a raw report file.
+- `grep` and `column` are optional, for filtering and printing the `sacct` output.
+- Save the above into a raw report file (e.g., using `tee` as shown above).
 
 ## Price Rates
 

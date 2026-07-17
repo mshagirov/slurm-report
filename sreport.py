@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 import re
 import sys
+import os
 
 # dict[str] -> str
 PRICE_RATES = {
@@ -51,9 +52,14 @@ def row_str2dict(col_names, row_str):
     return new_row
 
 
-def slurm_acct(starttime, endtime):
+def slurm_acct(starttime, endtime, user=None, allusers=False):
     """Slurm accounting table for a (truncated) period from 'start' to 'end'"""
-    cmd = f"sacct -X -T -p --allusers --format=User,Account,Partition,JobID,JobName,Start,End,ElapsedRaw,AllocTRES,State --starttime={starttime} --endtime={endtime}"
+    cmd = "sacct -X -T -p --format=User,Account,Partition,JobID,JobName,Start,End,ElapsedRaw,AllocTRES,State"
+    cmd += f" --starttime={starttime} --endtime={endtime}"
+    if allusers:
+        cmd += " --allusers"
+    elif user != None:
+        cmd += f" --user={user}"
 
     result = subprocess.run(cmd.split(),
                             capture_output=True,
@@ -126,13 +132,20 @@ def parse_args(args):
                         help='path to CSV file containing a sacct output.; if provided the input CSV will be used instead of sacct command and "starttime" and "endtime" are ignored')
     parser.add_argument('-o', '--output',
                         help='output path for processed CSV files', default=None)
+    parser.add_argument('-u', '--user',
+                        help='user name (ignored if --allusers is given)')
     parser.add_argument('-S', '--starttime',
                         help='start time of the report period in ISO format for `sacct`; DEFAULT: midnight start of the day 00:00:00')
     parser.add_argument('-E', '--endtime',
                         help='end of the report period in ISO format for `sacct`; DEFAULT: current datetime (now)')
+    parser.add_argument('--allusers',
+                        help='report for all users (i.e. \'sacct --allusers\')',
+                        action='store_true')
     parser.add_argument('--fixbilling',
                         help='use \'cpu\' and \'gres/gpu\' values for billing CPU and GPU jobs',
                         action='store_true')
+    parser.add_argument('-w', '--width',
+                        help='column width when printing to the STDOUT', type=int, default=15)
     return parser.parse_args(args)
 
 
@@ -140,10 +153,20 @@ def main():
     args = parse_args(sys.argv[1:])
 
     if args.input is None:
-        csv_file = Path('sacct_output.csv')
         starttime = args.starttime if args.starttime else datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
         endtime = args.endtime if args.endtime else datetime.now().replace(microsecond=0).isoformat()
-        cols, rows = slurm_acct(starttime, endtime)
+
+        csv_name = f'sacct_{starttime}_{endtime}_trunc'
+
+        user = os.getenv('USER') if args.user is None else args.user
+        if args.allusers or (user == 'root'):
+            allusers = True
+        else:
+            allusers = False
+            csv_name += f"_{user}"
+
+        csv_file = Path(f'{csv_name}.csv')
+        cols, rows = slurm_acct(starttime, endtime, user=user, allusers=allusers)
     else:
         csv_file = Path(args.input)
         cols, rows = read_csv(csv_file)
@@ -161,7 +184,9 @@ def main():
         return
 
     add_job_duration_hours(cols, rows)
-    # add_price_rate(cols, rows)
+
+    if (output_dir != None) and (args.input is None):
+        add_price_rate(cols, rows)
 
     users = defaultdict(lambda: defaultdict(float))
     for row in rows:
@@ -173,7 +198,7 @@ def main():
         users[(group, user)][(partition, rate)] += float(row['DurationHours']) * multiplier
 
 
-    user_cols = ['Group', 'User', 'Type', 'Rate', 'Total']
+    user_cols = ['Group', 'User', 'Type', 'Rate', 'TotalHours']
 
     user_rows = []
     for u, ps in users.items():
@@ -182,9 +207,9 @@ def main():
             user_rows.append(row_str2dict(user_cols, row_str))
 
     if output_dir is None:
-        print(','.join(user_cols))
+        print(' '.join(map(lambda s: f'{s:{args.width}}', user_cols)))
         for row in user_rows:
-            print(','.join(row.values()))
+            print(' '.join(map(lambda s: f'{s:{args.width}}', row.values())))
     else:
         output_dir = Path(output_dir)
         if not output_dir.exists():
@@ -198,4 +223,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
